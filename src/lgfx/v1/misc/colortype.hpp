@@ -524,87 +524,92 @@ namespace lgfx
 #define LGFX_INLINE __attribute__ ((always_inline)) inline
 #endif
 
-  template<class TDst, class TSrc> LGFX_INLINE uint32_t _color_convert(uint32_t c) { return c; }
-  template<class TDst, class TSrc> LGFX_INLINE uint32_t color_convert(uint32_t c)
+  namespace inner
   {
-      return _color_convert<typename std::decay<TDst>::type, typename std::decay<TSrc>::type>(c);
+    template<class TDst, class TSrc> LGFX_INLINE uint32_t _color_convert(uint32_t c) { return c; }
+
+    template<> LGFX_INLINE uint32_t _color_convert<rgb332_t   , rgb565_t   >(uint32_t c) { return (((((c >>13) & 7) << 3) + ((c >> 8) & 7)) << 2) + ((c >> 3) & 3); }
+    template<> LGFX_INLINE uint32_t _color_convert<rgb332_t   , rgb888_t   >(uint32_t c) { return (((((c >>21) & 7) << 3) + ((c >>13) & 7)) << 2) + ((c >> 6) & 3); }
+    template<> LGFX_INLINE uint32_t _color_convert<rgb332_t   , argb8888_t >(uint32_t c) { return (((((c >>21) & 7) << 3) + ((c >>13) & 7)) << 2) + ((c >> 6) & 3); }
+    template<> LGFX_INLINE uint32_t _color_convert<rgb332_t   , swap565_t  >(uint32_t c) { return (((((c >> 5) & 7) << 3) + ( c       & 7)) << 2) + ((c >>11) & 3); }
+    template<> LGFX_INLINE uint32_t _color_convert<rgb332_t   , bgr666_t   >(uint32_t c) { return (((((c >> 3) & 7) << 3) + ((c >>11) & 7)) << 2) + ((c >>20) & 3); }
+    template<> LGFX_INLINE uint32_t _color_convert<rgb332_t   , bgr888_t   >(uint32_t c) { return (((((c >> 5) & 7) << 3) + ((c >>13) & 7)) << 2) + ((c >>22) & 3); }
+    template<> LGFX_INLINE uint32_t _color_convert<rgb332_t   , bgra8888_t >(uint32_t c) { return (((((c >>13) & 7) << 3) + ((c >>21) & 7)) << 2) + ((c >>30) & 3); }
+    template<> LGFX_INLINE uint32_t _color_convert<rgb332_t   , grayscale_t>(uint32_t c) { return ((c>>5)*0x49)>>1; }
+    template<> LGFX_INLINE uint32_t _color_convert<rgb565_t   , rgb332_t   >(uint32_t c) { uint_fast8_t r = (c >> 5) & 0x07; r = (r << 2) + (r >> 1); uint_fast8_t g = (c >> 2) & 0x07; g = (g << 3) + g; uint_fast8_t b = c & 0x03; b = (((b << 2) + b) << 1) + (b >> 1); return (((r<<6)+g)<<5)+b; }
+    template<> LGFX_INLINE uint32_t _color_convert<rgb565_t   , rgb888_t   >(uint32_t c) { return (((((c >>19) & 0x1F) << 6) + ((c >>10) & 0x3F)) << 5) + ((c >> 3) & 0x1F); }
+    template<> LGFX_INLINE uint32_t _color_convert<rgb565_t   , argb8888_t >(uint32_t c) { return (((((c >>19) & 0x1F) << 6) + ((c >>10) & 0x3F)) << 5) + ((c >> 3) & 0x1F); }
+    template<> LGFX_INLINE uint32_t _color_convert<rgb565_t   , swap565_t  >(uint32_t c) { return getSwap16(c); }
+    template<> LGFX_INLINE uint32_t _color_convert<rgb565_t   , bgr666_t   >(uint32_t c) { return (((((c >> 1) & 0x1F) << 6) + ((c >> 8) & 0x3F)) << 5) + (c >> 17); }
+    template<> LGFX_INLINE uint32_t _color_convert<rgb565_t   , bgr888_t   >(uint32_t c) { return (((((c >> 3) & 0x1F) << 6) + ((c >>10) & 0x3F)) << 5) + (c >> 19); }
+    template<> LGFX_INLINE uint32_t _color_convert<rgb565_t   , bgra8888_t >(uint32_t c) { return (((((c >>11) & 0x1F) << 6) + ((c >>18) & 0x3F)) << 5) +((c >> 27) & 0x1F); }
+    template<> LGFX_INLINE uint32_t _color_convert<rgb565_t   , grayscale_t>(uint32_t c) { uint_fast8_t r = c >> 3; return ((c&0xFC) << 3) + (r | r << 11); }
+    template<> LGFX_INLINE uint32_t _color_convert<rgb888_t   , rgb332_t   >(uint32_t c) { uint_fast8_t r = (c >>  5) & 0x07; r = (((r<<3)+r)<<2)+(r>>1); uint_fast8_t g = c & 0x1C; g = (g << 3) + g + (g >> 3); uint_fast8_t b = (c & 0x03); b = (b << 2) + b; b = (b << 4) + b; return (((r<<8)+g)<<8)+b; }
+    template<> LGFX_INLINE uint32_t _color_convert<rgb888_t   , rgb565_t   >(uint32_t c) { uint_fast8_t r = (c >> 11) & 0x1F; r = (r << 3) + (r >> 2); uint_fast8_t g = (c >> 5) & 0x3F; g = (g << 2) + (g >> 4); uint_fast8_t b = c & 0x1F; b = (b << 3) + (b >> 2); return (((r<<8)+g)<<8)+b; }
+    template<> LGFX_INLINE uint32_t _color_convert<rgb888_t   , argb8888_t >(uint32_t c) { return (c << 8) >> 8; }
+    template<> LGFX_INLINE uint32_t _color_convert<rgb888_t   , swap565_t  >(uint32_t c) { uint_fast16_t g = (c & 7); uint_fast16_t b = (c >> 8) & 0x1F;  b = (b << 3) + (b >> 2); uint_fast16_t r = (c >> 3) & 0x1F;  r = (r << 3) + (r >> 2); return (((((((r << 3) + g) << 3) + (c >> 13)) << 2) + (g >> 1)) << 8) + b; }
+    template<> LGFX_INLINE uint32_t _color_convert<rgb888_t   , bgr666_t   >(uint32_t c) { return getSwap24((c << 2) + ((c >> 4) & 0x030303)); }
+    template<> LGFX_INLINE uint32_t _color_convert<rgb888_t   , bgr888_t   >(uint32_t c) { return getSwap24(c); }
+    template<> LGFX_INLINE uint32_t _color_convert<rgb888_t   , bgra8888_t >(uint32_t c) { return ((c>>8) & 0xFF) << 16 | ((c>>16)&0xFF)<<8 | (c>>24); }
+    template<> LGFX_INLINE uint32_t _color_convert<rgb888_t   , grayscale_t>(uint32_t c) { return c*0x010101; }
+    template<> LGFX_INLINE uint32_t _color_convert<argb8888_t , rgb332_t   >(uint32_t c) { uint_fast8_t r = (c >>  5) & 0x07; r = (((r<<3)+r)<<2)+(r>>1); uint_fast8_t g = c & 0x1C; g = (g << 3) + g + (g >> 3); uint_fast8_t b = (c & 0x03); b = (b << 2) + b; b = (b << 4) + b; return (((((0xFF<<8)+r)<<8)+g)<<8)+b; }
+    template<> LGFX_INLINE uint32_t _color_convert<argb8888_t , rgb565_t   >(uint32_t c) { uint_fast8_t r = (c >> 11) & 0x1F; r = (r << 3) + (r >> 2); uint_fast8_t g = (c >> 5) & 0x3F; g = (g << 2) + (g >> 4); uint_fast8_t b = c & 0x1F; b = (b << 3) + (b >> 2); return (((((0xFF<<8)+r)<<8)+g)<<8)+b; }
+    template<> LGFX_INLINE uint32_t _color_convert<argb8888_t , rgb888_t   >(uint32_t c) { return c | (0xFF << 24); }
+    template<> LGFX_INLINE uint32_t _color_convert<argb8888_t , swap565_t  >(uint32_t c) { uint_fast16_t g = (c & 7); uint_fast16_t b = (c >> 8) & 0x1F;  b = (b << 3) + (b >> 2); uint_fast16_t r = (c >> 3) & 0x1F;  r = (r << 3) + (r >> 2); return (((((((((0xFF << 8) + r) << 3) + g) << 3) + (c >> 13)) << 2) + (g >> 1)) << 8) + b; }
+    template<> LGFX_INLINE uint32_t _color_convert<argb8888_t , bgr666_t   >(uint32_t c) { c = ((((c | 0x3FC0)<<8) +  ((c>>8)&0x3F))<<8) + ((c>>16)&0x3F); return (c << 2) + ((c >> 4) & 0x030303); }
+    template<> LGFX_INLINE uint32_t _color_convert<argb8888_t , bgr888_t   >(uint32_t c) { return (c | 0xFF00)<<16 | (((c>>8)&0xFF))<<8  | ((c>>16)&0xFF); }
+    template<> LGFX_INLINE uint32_t _color_convert<argb8888_t , bgra8888_t >(uint32_t c) { return getSwap32(c); }
+    template<> LGFX_INLINE uint32_t _color_convert<argb8888_t , grayscale_t>(uint32_t c) { return (c * 0x010101) | (0xFF<<24); }
+    template<> LGFX_INLINE uint32_t _color_convert<swap565_t  , rgb332_t   >(uint32_t c) { uint_fast8_t r = (c >> 5) & 0x07; r = (r << 2) + (r >> 1); uint_fast8_t g = (c >> 2) & 0x07; uint_fast8_t b = c & 0x03; b = (((b << 2) + b) << 1) + (b >> 1); return (((((g<<5)+b)<<5)+r)<<3)+g; }
+    template<> LGFX_INLINE uint32_t _color_convert<swap565_t  , rgb565_t   >(uint32_t c) { return getSwap16(c); }
+    template<> LGFX_INLINE uint32_t _color_convert<swap565_t  , rgb888_t   >(uint32_t c) { uint_fast8_t r = (c >> 19) & 0x1F; uint_fast8_t gh = (c >> 13) & 0x07; uint_fast8_t gl = (c >> 10) & 0x07; uint_fast8_t b = (c >>  3) & 0x1F; return (((((gl << 5) + b) << 5) + r) << 3) + gh; }
+    template<> LGFX_INLINE uint32_t _color_convert<swap565_t  , argb8888_t >(uint32_t c) { uint_fast8_t r = (c >> 19) & 0x1F; uint_fast8_t gh = (c >> 13) & 0x07; uint_fast8_t gl = (c >> 10) & 0x07; uint_fast8_t b = (c >>  3) & 0x1F; return (((((gl << 5) + b) << 5) + r) << 3) + gh; }
+    template<> LGFX_INLINE uint32_t _color_convert<swap565_t  , bgr666_t   >(uint32_t c) { uint_fast8_t r = (c >>  1) & 0x1F; uint_fast8_t gh = (c >> 11) & 0x07; uint_fast8_t gl = (c >>  8) & 0x07; uint_fast8_t b = (c >> 17) & 0x1F; return (((((gl << 5) + b) << 5) + r) << 3) + gh; }
+    template<> LGFX_INLINE uint32_t _color_convert<swap565_t  , bgr888_t   >(uint32_t c) { uint_fast8_t r = (c >>  3) & 0x1F; uint_fast8_t gh = (c >> 13) & 0x07; uint_fast8_t gl = (c >> 10) & 0x07; uint_fast8_t b = (c >> 19) & 0x1F; return (((((gl << 5) + b) << 5) + r) << 3) + gh; }
+    template<> LGFX_INLINE uint32_t _color_convert<swap565_t  , bgra8888_t >(uint32_t c) { uint_fast8_t r = (c >> 11) & 0x1F; uint_fast8_t gh = (c >> 21) & 0x07; uint_fast8_t gl = (c >> 18) & 0x07; uint_fast8_t b = (c >> 27) & 0x1F; return (((((gl << 5) + b) << 5) + r) << 3) + gh; }
+    template<> LGFX_INLINE uint32_t _color_convert<swap565_t  , grayscale_t>(uint32_t c) { uint_fast8_t rb = c >> 3; return ((((((c & 0x1C) << 3) + rb) << 5) + rb) << 3) + (c >> 5); }
+    template<> LGFX_INLINE uint32_t _color_convert<bgr666_t   , rgb332_t   >(uint32_t c) { uint_fast8_t r = (c >>  5) & 0x07; r = (r << 3) +  r;       uint_fast8_t g = (c >> 2) & 0x07; g = (g << 3) + g; uint_fast8_t b = (c & 3) * 0x15; return (((b<<8)+g)<<8)+r; }
+    template<> LGFX_INLINE uint32_t _color_convert<bgr666_t   , rgb565_t   >(uint32_t c) { uint_fast8_t r = (c >> 11) & 0x1F; r = (r << 1) + (r >> 4); uint_fast8_t g = (c >> 5) & 0x3F; uint_fast8_t b = c & 0x1F; b = (b << 1) + (b >> 4); return (((b<<8)+g)<<8)+r; }
+    template<> LGFX_INLINE uint32_t _color_convert<bgr666_t   , rgb888_t   >(uint32_t c) { return ((c >> 2) & 0x3F) << 16 | ((c >> 10) & 0x3F) << 8 | ((c >> 18) & 0x3F);  }
+    template<> LGFX_INLINE uint32_t _color_convert<bgr666_t   , argb8888_t >(uint32_t c) { return ((c >> 2) & 0x3F) << 16 | ((c >> 10) & 0x3F) << 8 | ((c >> 18) & 0x3F);  }
+    template<> LGFX_INLINE uint32_t _color_convert<bgr666_t   , swap565_t  >(uint32_t c) { uint_fast16_t g = (c & 7); g = (g << 3) + (c >> 13); uint_fast16_t b = (c >> 8) & 0x1F;  b = (b << 1) + (b >> 4); uint_fast16_t r = (c >> 3) & 0x1F;  r = (r << 1) + (r >> 4); return (((b<<8)+g)<<8)+r; }
+    template<> LGFX_INLINE uint32_t _color_convert<bgr666_t   , bgr888_t   >(uint32_t c) { return (c >>  2) & 0x3F3F3F; }
+    template<> LGFX_INLINE uint32_t _color_convert<bgr666_t   , bgra8888_t >(uint32_t c) { return (c >> 10) & 0x3F3F3F; }
+    template<> LGFX_INLINE uint32_t _color_convert<bgr666_t   , grayscale_t>(uint32_t c) { return (c >>  2) * 0x010101; }
+    template<> LGFX_INLINE uint32_t _color_convert<bgr888_t   , rgb332_t   >(uint32_t c) { uint_fast8_t r = (c >>  5) & 0x07; r = (((r<<3)+r)<<2)+(r>>1); uint_fast8_t g = c & 0x1C; g = (g << 3) + g + (g >> 3); uint_fast8_t b = (c & 0x03) * 0x55; return (((b<<8)+g)<<8)+r; }
+    template<> LGFX_INLINE uint32_t _color_convert<bgr888_t   , rgb565_t   >(uint32_t c) { uint_fast8_t r = (c >> 11) & 0x1F; r = (r << 3) + (r >> 2); uint_fast8_t g = (c >> 5) & 0x3F; g = (g << 2) + (g >> 4); uint_fast8_t b = c & 0x1F; b = (b << 3) + (b >> 2); return (((b<<8)+g)<<8)+r; }
+    template<> LGFX_INLINE uint32_t _color_convert<bgr888_t   , rgb888_t   >(uint32_t c) { return getSwap24(c); }
+    template<> LGFX_INLINE uint32_t _color_convert<bgr888_t   , argb8888_t >(uint32_t c) { return getSwap24(c); }
+    template<> LGFX_INLINE uint32_t _color_convert<bgr888_t   , swap565_t  >(uint32_t c) { uint_fast16_t g = (c & 7); uint_fast16_t b = (c >> 8) & 0x1F;  b = (b << 3) + (b >> 2); uint_fast16_t r = (c >> 3) & 0x1F;  r = (r << 3) + (r >> 2); return (((((((b << 3) + g) << 3) + (c >> 13)) << 2) + (g >> 1)) << 8) + r; }
+    template<> LGFX_INLINE uint32_t _color_convert<bgr888_t   , bgr666_t   >(uint32_t c) { return (c << 2) + ((c >> 4) & 0x030303); }
+    template<> LGFX_INLINE uint32_t _color_convert<bgr888_t   , bgra8888_t >(uint32_t c) { return c >> 8; }
+    template<> LGFX_INLINE uint32_t _color_convert<bgr888_t   , grayscale_t>(uint32_t c) { return ((c << 16) + c) + (c << 8); }
+    template<> LGFX_INLINE uint32_t _color_convert<bgra8888_t , rgb332_t   >(uint32_t c) { uint_fast8_t r = (c>> 5)*0x49; uint_fast8_t g = c & 0x1C; g = (g << 3) + g + (g >> 3); uint_fast8_t b = (c & 0x03) * 0x55; return (((((b<<8)+g)<<9)+r)<<7)|0xFF; }
+    template<> LGFX_INLINE uint32_t _color_convert<bgra8888_t , rgb565_t   >(uint32_t c) { uint_fast8_t r = (c >> 11) & 0x1F; r = (r << 3) + (r >> 2); uint_fast8_t g = (c >> 5) & 0x3F; g = (g << 2) + (g >> 4); uint_fast8_t b = c & 0x1F; b = (b << 3) + (b >> 2); return (((((b<<8)+g)<<8)+r)<<8)+0xFF; }
+    template<> LGFX_INLINE uint32_t _color_convert<bgra8888_t , rgb888_t   >(uint32_t c) { return (((c << 8) + ((c >> 8) & 0xFF)) << 16) + ((uint16_t)(c >> 8) | 0xFF); }
+    template<> LGFX_INLINE uint32_t _color_convert<bgra8888_t , argb8888_t >(uint32_t c) { return getSwap32(c); }
+    template<> LGFX_INLINE uint32_t _color_convert<bgra8888_t , swap565_t  >(uint32_t c) { uint_fast16_t g = (c & 7); uint_fast16_t b = (c >> 8) & 0x1F;  b = (b << 3) + (b >> 2); uint_fast16_t r = (c >> 3) & 0x1F;  r = (r << 3) + (r >> 2); return (((((((((b << 3) + g) << 3) + (c >> 13)) << 2) + (g >> 1)) << 8) + r) << 8) + 0xFF; }
+    template<> LGFX_INLINE uint32_t _color_convert<bgra8888_t , bgr666_t   >(uint32_t c) { c<<=2; return (c << 8) + ((c & 0xC0C0C0) << 2) + 0xFF; }
+    template<> LGFX_INLINE uint32_t _color_convert<bgra8888_t , bgr888_t   >(uint32_t c) { return (c << 8) + 0xFF; }
+    template<> LGFX_INLINE uint32_t _color_convert<bgra8888_t , grayscale_t>(uint32_t c) { return (((c << 8) + c) << 16) + (c << 8) + 0xFF; }
+
+    // ITU-R BT.601 RGB to Y convert  R 0.299 + G 0.587 + B 0.114
+    template<> LGFX_INLINE uint32_t _color_convert<grayscale_t, rgb332_t   >(uint32_t c) { return (((c >>  5) & 0x07) *  43 + ((c >>  2) & 0x07) *  86 +  (c        & 0x03) *  39) >> 2; }
+    template<> LGFX_INLINE uint32_t _color_convert<grayscale_t, rgb565_t   >(uint32_t c) { return (((c >> 11) & 0x1F) *  79 + ((c >>  5) & 0x3F) *  76 +  (c        & 0x1F) *  30) >> 5; }
+    template<> LGFX_INLINE uint32_t _color_convert<grayscale_t, rgb888_t   >(uint32_t c) { return (((c >> 16) & 0xFF) *  77 + ((c >>  8) & 0xFF) * 151 +  (c        & 0xFF) *  29) >> 8; }
+    template<> LGFX_INLINE uint32_t _color_convert<grayscale_t, argb8888_t >(uint32_t c) { return (((c >> 24) & 0xFF) *  77 + ((c >> 16) & 0xFF) * 151 + ((c >>  8) & 0xFF) *  29) >> 8; }
+    template<> LGFX_INLINE uint32_t _color_convert<grayscale_t, swap565_t  >(uint32_t c) { return (((c >>  3) & 0x1F) *  79+(((c<<3)+(c>>13))&0x3F)*76 + ((c >>  8) & 0x1F) *  30) >> 5; }
+    template<> LGFX_INLINE uint32_t _color_convert<grayscale_t, bgr666_t   >(uint32_t c) { return (( c        & 0x3F) *  39 + ((c >>  8) & 0x3F) *  76 + ((c >> 16) & 0x3F) *  15) >> 5; }
+    template<> LGFX_INLINE uint32_t _color_convert<grayscale_t, bgr888_t   >(uint32_t c) { return (( c        & 0xFF) *  77 + ((c >>  8) & 0xFF) * 151 + ((c >> 16) & 0xFF) *  29) >> 8; }
+    template<> LGFX_INLINE uint32_t _color_convert<grayscale_t, bgra8888_t >(uint32_t c) { return _color_convert<grayscale_t, bgr888_t>(c>>8); }
+
   }
 
-  template<> LGFX_INLINE uint32_t _color_convert<rgb332_t   , rgb565_t   >(uint32_t c) { return (((((c >>13) & 7) << 3) + ((c >> 8) & 7)) << 2) + ((c >> 3) & 3); }
-  template<> LGFX_INLINE uint32_t _color_convert<rgb332_t   , rgb888_t   >(uint32_t c) { return (((((c >>21) & 7) << 3) + ((c >>13) & 7)) << 2) + ((c >> 6) & 3); }
-  template<> LGFX_INLINE uint32_t _color_convert<rgb332_t   , argb8888_t >(uint32_t c) { return (((((c >>21) & 7) << 3) + ((c >>13) & 7)) << 2) + ((c >> 6) & 3); }
-  template<> LGFX_INLINE uint32_t _color_convert<rgb332_t   , swap565_t  >(uint32_t c) { return (((((c >> 5) & 7) << 3) + ( c       & 7)) << 2) + ((c >>11) & 3); }
-  template<> LGFX_INLINE uint32_t _color_convert<rgb332_t   , bgr666_t   >(uint32_t c) { return (((((c >> 3) & 7) << 3) + ((c >>11) & 7)) << 2) + ((c >>20) & 3); }
-  template<> LGFX_INLINE uint32_t _color_convert<rgb332_t   , bgr888_t   >(uint32_t c) { return (((((c >> 5) & 7) << 3) + ((c >>13) & 7)) << 2) + ((c >>22) & 3); }
-  template<> LGFX_INLINE uint32_t _color_convert<rgb332_t   , bgra8888_t >(uint32_t c) { return (((((c >>13) & 7) << 3) + ((c >>21) & 7)) << 2) + ((c >>30) & 3); }
-  template<> LGFX_INLINE uint32_t _color_convert<rgb332_t   , grayscale_t>(uint32_t c) { return ((c>>5)*0x49)>>1; }
-  template<> LGFX_INLINE uint32_t _color_convert<rgb565_t   , rgb332_t   >(uint32_t c) { uint_fast8_t r = (c >> 5) & 0x07; r = (r << 2) + (r >> 1); uint_fast8_t g = (c >> 2) & 0x07; g = (g << 3) + g; uint_fast8_t b = c & 0x03; b = (((b << 2) + b) << 1) + (b >> 1); return (((r<<6)+g)<<5)+b; }
-  template<> LGFX_INLINE uint32_t _color_convert<rgb565_t   , rgb888_t   >(uint32_t c) { return (((((c >>19) & 0x1F) << 6) + ((c >>10) & 0x3F)) << 5) + ((c >> 3) & 0x1F); }
-  template<> LGFX_INLINE uint32_t _color_convert<rgb565_t   , argb8888_t >(uint32_t c) { return (((((c >>19) & 0x1F) << 6) + ((c >>10) & 0x3F)) << 5) + ((c >> 3) & 0x1F); }
-  template<> LGFX_INLINE uint32_t _color_convert<rgb565_t   , swap565_t  >(uint32_t c) { return getSwap16(c); }
-  template<> LGFX_INLINE uint32_t _color_convert<rgb565_t   , bgr666_t   >(uint32_t c) { return (((((c >> 1) & 0x1F) << 6) + ((c >> 8) & 0x3F)) << 5) + (c >> 17); }
-  template<> LGFX_INLINE uint32_t _color_convert<rgb565_t   , bgr888_t   >(uint32_t c) { return (((((c >> 3) & 0x1F) << 6) + ((c >>10) & 0x3F)) << 5) + (c >> 19); }
-  template<> LGFX_INLINE uint32_t _color_convert<rgb565_t   , bgra8888_t >(uint32_t c) { return (((((c >>11) & 0x1F) << 6) + ((c >>18) & 0x3F)) << 5) +((c >> 27) & 0x1F); }
-  template<> LGFX_INLINE uint32_t _color_convert<rgb565_t   , grayscale_t>(uint32_t c) { uint_fast8_t r = c >> 3; return ((c&0xFC) << 3) + (r | r << 11); }
-  template<> LGFX_INLINE uint32_t _color_convert<rgb888_t   , rgb332_t   >(uint32_t c) { uint_fast8_t r = (c >>  5) & 0x07; r = (((r<<3)+r)<<2)+(r>>1); uint_fast8_t g = c & 0x1C; g = (g << 3) + g + (g >> 3); uint_fast8_t b = (c & 0x03); b = (b << 2) + b; b = (b << 4) + b; return (((r<<8)+g)<<8)+b; }
-  template<> LGFX_INLINE uint32_t _color_convert<rgb888_t   , rgb565_t   >(uint32_t c) { uint_fast8_t r = (c >> 11) & 0x1F; r = (r << 3) + (r >> 2); uint_fast8_t g = (c >> 5) & 0x3F; g = (g << 2) + (g >> 4); uint_fast8_t b = c & 0x1F; b = (b << 3) + (b >> 2); return (((r<<8)+g)<<8)+b; }
-  template<> LGFX_INLINE uint32_t _color_convert<rgb888_t   , argb8888_t >(uint32_t c) { return (c << 8) >> 8; }
-  template<> LGFX_INLINE uint32_t _color_convert<rgb888_t   , swap565_t  >(uint32_t c) { uint_fast16_t g = (c & 7); uint_fast16_t b = (c >> 8) & 0x1F;  b = (b << 3) + (b >> 2); uint_fast16_t r = (c >> 3) & 0x1F;  r = (r << 3) + (r >> 2); return (((((((r << 3) + g) << 3) + (c >> 13)) << 2) + (g >> 1)) << 8) + b; }
-  template<> LGFX_INLINE uint32_t _color_convert<rgb888_t   , bgr666_t   >(uint32_t c) { return getSwap24((c << 2) + ((c >> 4) & 0x030303)); }
-  template<> LGFX_INLINE uint32_t _color_convert<rgb888_t   , bgr888_t   >(uint32_t c) { return getSwap24(c); }
-  template<> LGFX_INLINE uint32_t _color_convert<rgb888_t   , bgra8888_t >(uint32_t c) { return ((c>>8) & 0xFF) << 16 | ((c>>16)&0xFF)<<8 | (c>>24); }
-  template<> LGFX_INLINE uint32_t _color_convert<rgb888_t   , grayscale_t>(uint32_t c) { return c*0x010101; }
-  template<> LGFX_INLINE uint32_t _color_convert<argb8888_t , rgb332_t   >(uint32_t c) { uint_fast8_t r = (c >>  5) & 0x07; r = (((r<<3)+r)<<2)+(r>>1); uint_fast8_t g = c & 0x1C; g = (g << 3) + g + (g >> 3); uint_fast8_t b = (c & 0x03); b = (b << 2) + b; b = (b << 4) + b; return (((((0xFF<<8)+r)<<8)+g)<<8)+b; }
-  template<> LGFX_INLINE uint32_t _color_convert<argb8888_t , rgb565_t   >(uint32_t c) { uint_fast8_t r = (c >> 11) & 0x1F; r = (r << 3) + (r >> 2); uint_fast8_t g = (c >> 5) & 0x3F; g = (g << 2) + (g >> 4); uint_fast8_t b = c & 0x1F; b = (b << 3) + (b >> 2); return (((((0xFF<<8)+r)<<8)+g)<<8)+b; }
-  template<> LGFX_INLINE uint32_t _color_convert<argb8888_t , rgb888_t   >(uint32_t c) { return c | (0xFF << 24); }
-  template<> LGFX_INLINE uint32_t _color_convert<argb8888_t , swap565_t  >(uint32_t c) { uint_fast16_t g = (c & 7); uint_fast16_t b = (c >> 8) & 0x1F;  b = (b << 3) + (b >> 2); uint_fast16_t r = (c >> 3) & 0x1F;  r = (r << 3) + (r >> 2); return (((((((((0xFF << 8) + r) << 3) + g) << 3) + (c >> 13)) << 2) + (g >> 1)) << 8) + b; }
-  template<> LGFX_INLINE uint32_t _color_convert<argb8888_t , bgr666_t   >(uint32_t c) { c = ((((c | 0x3FC0)<<8) +  ((c>>8)&0x3F))<<8) + ((c>>16)&0x3F); return (c << 2) + ((c >> 4) & 0x030303); }
-  template<> LGFX_INLINE uint32_t _color_convert<argb8888_t , bgr888_t   >(uint32_t c) { return (c | 0xFF00)<<16 | (((c>>8)&0xFF))<<8  | ((c>>16)&0xFF); }
-  template<> LGFX_INLINE uint32_t _color_convert<argb8888_t , bgra8888_t >(uint32_t c) { return getSwap32(c); }
-  template<> LGFX_INLINE uint32_t _color_convert<argb8888_t , grayscale_t>(uint32_t c) { return (c * 0x010101) | (0xFF<<24); }
-  template<> LGFX_INLINE uint32_t _color_convert<swap565_t  , rgb332_t   >(uint32_t c) { uint_fast8_t r = (c >> 5) & 0x07; r = (r << 2) + (r >> 1); uint_fast8_t g = (c >> 2) & 0x07; uint_fast8_t b = c & 0x03; b = (((b << 2) + b) << 1) + (b >> 1); return (((((g<<5)+b)<<5)+r)<<3)+g; }
-  template<> LGFX_INLINE uint32_t _color_convert<swap565_t  , rgb565_t   >(uint32_t c) { return getSwap16(c); }
-  template<> LGFX_INLINE uint32_t _color_convert<swap565_t  , rgb888_t   >(uint32_t c) { uint_fast8_t r = (c >> 19) & 0x1F; uint_fast8_t gh = (c >> 13) & 0x07; uint_fast8_t gl = (c >> 10) & 0x07; uint_fast8_t b = (c >>  3) & 0x1F; return (((((gl << 5) + b) << 5) + r) << 3) + gh; }
-  template<> LGFX_INLINE uint32_t _color_convert<swap565_t  , argb8888_t >(uint32_t c) { uint_fast8_t r = (c >> 19) & 0x1F; uint_fast8_t gh = (c >> 13) & 0x07; uint_fast8_t gl = (c >> 10) & 0x07; uint_fast8_t b = (c >>  3) & 0x1F; return (((((gl << 5) + b) << 5) + r) << 3) + gh; }
-  template<> LGFX_INLINE uint32_t _color_convert<swap565_t  , bgr666_t   >(uint32_t c) { uint_fast8_t r = (c >>  1) & 0x1F; uint_fast8_t gh = (c >> 11) & 0x07; uint_fast8_t gl = (c >>  8) & 0x07; uint_fast8_t b = (c >> 17) & 0x1F; return (((((gl << 5) + b) << 5) + r) << 3) + gh; }
-  template<> LGFX_INLINE uint32_t _color_convert<swap565_t  , bgr888_t   >(uint32_t c) { uint_fast8_t r = (c >>  3) & 0x1F; uint_fast8_t gh = (c >> 13) & 0x07; uint_fast8_t gl = (c >> 10) & 0x07; uint_fast8_t b = (c >> 19) & 0x1F; return (((((gl << 5) + b) << 5) + r) << 3) + gh; }
-  template<> LGFX_INLINE uint32_t _color_convert<swap565_t  , bgra8888_t >(uint32_t c) { uint_fast8_t r = (c >> 11) & 0x1F; uint_fast8_t gh = (c >> 21) & 0x07; uint_fast8_t gl = (c >> 18) & 0x07; uint_fast8_t b = (c >> 27) & 0x1F; return (((((gl << 5) + b) << 5) + r) << 3) + gh; }
-  template<> LGFX_INLINE uint32_t _color_convert<swap565_t  , grayscale_t>(uint32_t c) { uint_fast8_t rb = c >> 3; return ((((((c & 0x1C) << 3) + rb) << 5) + rb) << 3) + (c >> 5); }
-  template<> LGFX_INLINE uint32_t _color_convert<bgr666_t   , rgb332_t   >(uint32_t c) { uint_fast8_t r = (c >>  5) & 0x07; r = (r << 3) +  r;       uint_fast8_t g = (c >> 2) & 0x07; g = (g << 3) + g; uint_fast8_t b = (c & 3) * 0x15; return (((b<<8)+g)<<8)+r; }
-  template<> LGFX_INLINE uint32_t _color_convert<bgr666_t   , rgb565_t   >(uint32_t c) { uint_fast8_t r = (c >> 11) & 0x1F; r = (r << 1) + (r >> 4); uint_fast8_t g = (c >> 5) & 0x3F; uint_fast8_t b = c & 0x1F; b = (b << 1) + (b >> 4); return (((b<<8)+g)<<8)+r; }
-  template<> LGFX_INLINE uint32_t _color_convert<bgr666_t   , rgb888_t   >(uint32_t c) { return ((c >> 2) & 0x3F) << 16 | ((c >> 10) & 0x3F) << 8 | ((c >> 18) & 0x3F);  }
-  template<> LGFX_INLINE uint32_t _color_convert<bgr666_t   , argb8888_t >(uint32_t c) { return ((c >> 2) & 0x3F) << 16 | ((c >> 10) & 0x3F) << 8 | ((c >> 18) & 0x3F);  }
-  template<> LGFX_INLINE uint32_t _color_convert<bgr666_t   , swap565_t  >(uint32_t c) { uint_fast16_t g = (c & 7); g = (g << 3) + (c >> 13); uint_fast16_t b = (c >> 8) & 0x1F;  b = (b << 1) + (b >> 4); uint_fast16_t r = (c >> 3) & 0x1F;  r = (r << 1) + (r >> 4); return (((b<<8)+g)<<8)+r; }
-  template<> LGFX_INLINE uint32_t _color_convert<bgr666_t   , bgr888_t   >(uint32_t c) { return (c >>  2) & 0x3F3F3F; }
-  template<> LGFX_INLINE uint32_t _color_convert<bgr666_t   , bgra8888_t >(uint32_t c) { return (c >> 10) & 0x3F3F3F; }
-  template<> LGFX_INLINE uint32_t _color_convert<bgr666_t   , grayscale_t>(uint32_t c) { return (c >>  2) * 0x010101; }
-  template<> LGFX_INLINE uint32_t _color_convert<bgr888_t   , rgb332_t   >(uint32_t c) { uint_fast8_t r = (c >>  5) & 0x07; r = (((r<<3)+r)<<2)+(r>>1); uint_fast8_t g = c & 0x1C; g = (g << 3) + g + (g >> 3); uint_fast8_t b = (c & 0x03) * 0x55; return (((b<<8)+g)<<8)+r; }
-  template<> LGFX_INLINE uint32_t _color_convert<bgr888_t   , rgb565_t   >(uint32_t c) { uint_fast8_t r = (c >> 11) & 0x1F; r = (r << 3) + (r >> 2); uint_fast8_t g = (c >> 5) & 0x3F; g = (g << 2) + (g >> 4); uint_fast8_t b = c & 0x1F; b = (b << 3) + (b >> 2); return (((b<<8)+g)<<8)+r; }
-  template<> LGFX_INLINE uint32_t _color_convert<bgr888_t   , rgb888_t   >(uint32_t c) { return getSwap24(c); }
-  template<> LGFX_INLINE uint32_t _color_convert<bgr888_t   , argb8888_t >(uint32_t c) { return getSwap24(c); }
-  template<> LGFX_INLINE uint32_t _color_convert<bgr888_t   , swap565_t  >(uint32_t c) { uint_fast16_t g = (c & 7); uint_fast16_t b = (c >> 8) & 0x1F;  b = (b << 3) + (b >> 2); uint_fast16_t r = (c >> 3) & 0x1F;  r = (r << 3) + (r >> 2); return (((((((b << 3) + g) << 3) + (c >> 13)) << 2) + (g >> 1)) << 8) + r; }
-  template<> LGFX_INLINE uint32_t _color_convert<bgr888_t   , bgr666_t   >(uint32_t c) { return (c << 2) + ((c >> 4) & 0x030303); }
-  template<> LGFX_INLINE uint32_t _color_convert<bgr888_t   , bgra8888_t >(uint32_t c) { return c >> 8; }
-  template<> LGFX_INLINE uint32_t _color_convert<bgr888_t   , grayscale_t>(uint32_t c) { return ((c << 16) + c) + (c << 8); }
-  template<> LGFX_INLINE uint32_t _color_convert<bgra8888_t , rgb332_t   >(uint32_t c) { uint_fast8_t r = (c>> 5)*0x49; uint_fast8_t g = c & 0x1C; g = (g << 3) + g + (g >> 3); uint_fast8_t b = (c & 0x03) * 0x55; return (((((b<<8)+g)<<9)+r)<<7)|0xFF; }
-  template<> LGFX_INLINE uint32_t _color_convert<bgra8888_t , rgb565_t   >(uint32_t c) { uint_fast8_t r = (c >> 11) & 0x1F; r = (r << 3) + (r >> 2); uint_fast8_t g = (c >> 5) & 0x3F; g = (g << 2) + (g >> 4); uint_fast8_t b = c & 0x1F; b = (b << 3) + (b >> 2); return (((((b<<8)+g)<<8)+r)<<8)+0xFF; }
-  template<> LGFX_INLINE uint32_t _color_convert<bgra8888_t , rgb888_t   >(uint32_t c) { return (((c << 8) + ((c >> 8) & 0xFF)) << 16) + ((uint16_t)(c >> 8) | 0xFF); }
-  template<> LGFX_INLINE uint32_t _color_convert<bgra8888_t , argb8888_t >(uint32_t c) { return getSwap32(c); }
-  template<> LGFX_INLINE uint32_t _color_convert<bgra8888_t , swap565_t  >(uint32_t c) { uint_fast16_t g = (c & 7); uint_fast16_t b = (c >> 8) & 0x1F;  b = (b << 3) + (b >> 2); uint_fast16_t r = (c >> 3) & 0x1F;  r = (r << 3) + (r >> 2); return (((((((((b << 3) + g) << 3) + (c >> 13)) << 2) + (g >> 1)) << 8) + r) << 8) + 0xFF; }
-  template<> LGFX_INLINE uint32_t _color_convert<bgra8888_t , bgr666_t   >(uint32_t c) { c<<=2; return (c << 8) + ((c & 0xC0C0C0) << 2) + 0xFF; }
-  template<> LGFX_INLINE uint32_t _color_convert<bgra8888_t , bgr888_t   >(uint32_t c) { return (c << 8) + 0xFF; }
-  template<> LGFX_INLINE uint32_t _color_convert<bgra8888_t , grayscale_t>(uint32_t c) { return (((c << 8) + c) << 16) + (c << 8) + 0xFF; }
-
-// ITU-R BT.601 RGB to Y convert  R 0.299 + G 0.587 + B 0.114
-  template<> LGFX_INLINE uint32_t _color_convert<grayscale_t, rgb332_t   >(uint32_t c) { return (((c >>  5) & 0x07) *  43 + ((c >>  2) & 0x07) *  86 +  (c        & 0x03) *  39) >> 2; }
-  template<> LGFX_INLINE uint32_t _color_convert<grayscale_t, rgb565_t   >(uint32_t c) { return (((c >> 11) & 0x1F) *  79 + ((c >>  5) & 0x3F) *  76 +  (c        & 0x1F) *  30) >> 5; }
-  template<> LGFX_INLINE uint32_t _color_convert<grayscale_t, rgb888_t   >(uint32_t c) { return (((c >> 16) & 0xFF) *  77 + ((c >>  8) & 0xFF) * 151 +  (c        & 0xFF) *  29) >> 8; }
-  template<> LGFX_INLINE uint32_t _color_convert<grayscale_t, argb8888_t >(uint32_t c) { return (((c >> 24) & 0xFF) *  77 + ((c >> 16) & 0xFF) * 151 + ((c >>  8) & 0xFF) *  29) >> 8; }
-  template<> LGFX_INLINE uint32_t _color_convert<grayscale_t, swap565_t  >(uint32_t c) { return (((c >>  3) & 0x1F) *  79+(((c<<3)+(c>>13))&0x3F)*76 + ((c >>  8) & 0x1F) *  30) >> 5; }
-  template<> LGFX_INLINE uint32_t _color_convert<grayscale_t, bgr666_t   >(uint32_t c) { return (( c        & 0x3F) *  39 + ((c >>  8) & 0x3F) *  76 + ((c >> 16) & 0x3F) *  15) >> 5; }
-  template<> LGFX_INLINE uint32_t _color_convert<grayscale_t, bgr888_t   >(uint32_t c) { return (( c        & 0xFF) *  77 + ((c >>  8) & 0xFF) * 151 + ((c >> 16) & 0xFF) *  29) >> 8; }
-  template<> LGFX_INLINE uint32_t _color_convert<grayscale_t, bgra8888_t >(uint32_t c) { return _color_convert<grayscale_t, bgr888_t>(c>>8); }
-
+  template<class TDst, class TSrc> LGFX_INLINE uint32_t color_convert(uint32_t c)
+  {
+      return inner::_color_convert<typename std::decay<TDst>::type, typename std::decay<TSrc>::type>(c);
+  }
+ 
   LGFX_INLINE rgb332_t&    rgb332_t   ::operator=(const rgb565_t&    c) { set(color_convert<rgb332_t   , rgb565_t   >(c.get())); return *this; }
   LGFX_INLINE rgb332_t&    rgb332_t   ::operator=(const rgb888_t&    c) { set(color_convert<rgb332_t   , rgb888_t   >(c.get())); return *this; }
   LGFX_INLINE rgb332_t&    rgb332_t   ::operator=(const argb8888_t&  c) { set(color_convert<rgb332_t   , argb8888_t >(c.get())); return *this; }
